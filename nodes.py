@@ -1,7 +1,6 @@
 # (c) City96 || Apache-2.0 (apache.org/licenses/LICENSE-2.0)
 import torch
 import logging
-import inspect
 import collections
 
 import nodes
@@ -166,15 +165,9 @@ class UnetLoaderGGUF:
 
         # init model
         unet_path = folder_paths.get_full_path("unet", unet_name)
-        sd, extra = gguf_sd_loader(unet_path)
-
-        kwargs = {}
-        valid_params = inspect.signature(comfy.sd.load_diffusion_model_state_dict).parameters
-        if "metadata" in valid_params:
-            kwargs["metadata"] = extra.get("metadata", {})
-
+        sd = gguf_sd_loader(unet_path)
         model = comfy.sd.load_diffusion_model_state_dict(
-            sd, model_options={"custom_operations": ops}, **kwargs,
+            sd, model_options={"custom_operations": ops}
         )
         if model is None:
             logging.error("ERROR UNSUPPORTED UNET {}".format(unet_path))
@@ -201,10 +194,13 @@ class CLIPLoaderGGUF:
     @classmethod
     def INPUT_TYPES(s):
         base = nodes.CLIPLoader.INPUT_TYPES()
+        base_types = list(base["required"]["type"][0])
+        if "mistral3" not in base_types:
+            base_types = base_types + ["mistral3"]
         return {
             "required": {
                 "clip_name": (s.get_filename_list(),),
-                "type": base["required"]["type"],
+                "type": (base_types,),
             }
         }
 
@@ -326,4 +322,3 @@ NODE_CLASS_MAPPINGS = {
     "QuadrupleCLIPLoaderGGUF": QuadrupleCLIPLoaderGGUF,
     "UnetLoaderGGUFAdvanced": UnetLoaderGGUFAdvanced,
 }
-
